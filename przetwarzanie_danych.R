@@ -25,7 +25,7 @@
 #razem to bedzie 6 * 2 statystyk - 12 kolumn + kolumna z nazwa klasy (czyli kto byl lepszy) + data = razem 14 kolumn
 
 
-
+library(stringr)
 #import danych 
 this.dir<- dirname(parent.frame(2)$ofile)
 datafiles <- list.files(path=this.dir, pattern="*.csv",recursive=FALSE)
@@ -78,10 +78,35 @@ calcStats<-function(dataset, team = "Man United"){
     lostAway<-sum((filter(x,AwayTeam == team))$FTAG)
     return(lostHome+lostAway)
   })
- 
-  return(stats<-data.frame(nPoints,nWins,nDraws,nLoses,goalsScored,goalsLost))
+  
+  date<-sapply(cut.data, function(x){
+    str_sub(x[1,2],-2,-1)
+  })
+
+  return(stats<-data.frame(date,nPoints,nWins,nDraws,nLoses,goalsScored,goalsLost))
    
 }
+#evaluating class (1 if United was better 2 if liverpool was better or equal)
 stats.Utd<-calcStats(cut.data)
+stats.Utd10<-calcStats(last.ten.data)
+liv.data<-lapply(datasets, filter, HomeTeam == "Liverpool" | AwayTeam == "Liverpool")
+stats.Liv<-calcStats(liv.data, team = "Liverpool")
+stats.full.Utd<-calcStats(utd.data)
+
+utd.liv.diff<-stats.full.Utd$nPoints-stats.Liv$nPoints
+class<-sapply(utd.liv.diff, function(x){
+  if (x>0) {
+    1
+  }
+  else{
+    2
+  }
+})
+class<-factor(class)
+#merger of a statssets
+
+export<-merge(stats.Utd,stats.Utd10,by.x = "date", by.y = "date")
+export$class<-class
 
 
+write.csv(export, file = "starts_utd.csv")
